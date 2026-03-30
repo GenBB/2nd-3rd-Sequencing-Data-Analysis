@@ -23,7 +23,7 @@ for r in ${SAMPLES}; do
     fastq_1="${r}_1.fq.gz"
     fastq_2="${r}_2.fq.gz"
 
-    bwa mem -t 36 $REF_FASTA $fastq_1 $fastq_2 | samtools view -u -F0x4 -@ 4 - | samtools sort -@ 4 -m 3G -T ./tmp_sort_dir/${r}_tmp -o ${r}.pe.F4.s.bam -
+    bwa mem -t 32 $REF_FASTA $fastq_1 $fastq_2 | samtools view -u -F0x4 -@ 4 - | samtools sort -@ 8 -m 5G -T ./tmp_sort_dir/${r}_tmp -o ${r}.pe.F4.s.bam -
     samtools index -@ 16 ${r}.pe.F4.s.bam
 
     samtools view -@ 16 -bS -F0x904 ${r}.pe.F4.s.bam > ${r}.pe.F904.s.bam
@@ -43,7 +43,7 @@ for r in ${SAMPLES}; do
     
     samtools view -@ 8 ${r}.pe.F904.s.bam | awk -v id="$r" 'BEGIN{total_count = 0; sa_count = 0} {total_count++; if($0 ~ /SA:Z:/){sa_count++}} END{print id"\t"sa_count"\t"total_count}' >> ${DATE}.splitmapping.count
 
-    samtools sort -n -@ 4 -m 3G -T ./tmp_sort_dir/${r}_ns_tmp -o ${r}.F4.name_s.bam ${r}.pe.F4.s.bam
+    samtools sort -n -@ 8 -m 5G -T ./tmp_sort_dir/${r}_ns_tmp -o ${r}.F4.name_s.bam ${r}.pe.F4.s.bam
     inbam=${r}.F4.name_s.bam
     python3 /rd2/wangwbx/project/get_chimera.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.pe.quick.py $inbam $r >> ${DATE}.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.count &
 
@@ -53,7 +53,7 @@ for r in ${SAMPLES}; do
     p2=$!
     
     wait "$p1" "$p2"
-
+    rm -f "${r}.pe.F4.s.bam" "${r}.F4.name_s.bam" 2>/dev/null
 done
 
 wait
