@@ -17,21 +17,17 @@ done
 for r in ${SAMPLES}; do
     total_reads=$(samtools idxstats ${r}.pe.F904.s.bam | awk '{sum += $3} END {print sum}')
 
-    norm_F4="${r}.pe.F4.${SUFFIX}.s.bam"
     norm_F904="${r}.pe.F904.${SUFFIX}.s.bam"
 
     if [ "$total_reads" -le "$TARGET_READS" ]; then
-        cp ${r}.pe.F4.s.bam $norm_F4
         cp ${r}.pe.F904.s.bam $norm_F904
     else
         fraction=$(awk -v t="$TARGET_READS" -v tot="$total_reads" 'BEGIN {printf "%.4f", t/tot}')
         seed_frac=$(awk -v f="$fraction" 'BEGIN { printf "42%s", substr(f, 2) }')
         
-        samtools view -@ 16 -s "$seed_frac" -b ${r}.pe.F4.s.bam > $norm_F4
-        samtools view -@ 16 -bS -F0x904 $norm_F4 > $norm_F904
+        samtools view -@ 16 -s "$seed_frac" -b ${r}.pe.F904.s.bam > $norm_F904
     fi
 
-    samtools index -@ 16 $norm_F4
     samtools index -@ 16 $norm_F904
 
     mosdepth_prefix="${r}.F904.${SUFFIX}"
@@ -59,8 +55,8 @@ for r in ${SAMPLES}; do
         print id"\tread_2\t"r2
     }' >> ${DATE}.${SUFFIX}.total_base.count
 
-    samtools sort -n -@ 8 -m 5G -T ./tmp_sort_dir/${r}_ns_tmp -o ${r}.F4.${SUFFIX}.name_s.bam $norm_F4
-    inbam_ns=${r}.F4.${SUFFIX}.name_s.bam
+    samtools sort -n -@ 8 -m 5G -T ./tmp_sort_dir/${r}_ns_tmp -o ${r}.F904.${SUFFIX}.name_s.bam $norm_F904
+    inbam_ns=${r}.F904.${SUFFIX}.name_s.bam
     
     python3 /rd2/wangwbx/project/get_chimera.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.pe.quick.py $inbam_ns $r >> ${DATE}.${SUFFIX}.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.count &
 
