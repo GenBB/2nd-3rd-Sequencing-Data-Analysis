@@ -1,11 +1,10 @@
-# Setup & Environment
-work_dir <- "D:/Bishe/1ng/project/xyz/20260324/downsample_66M"
+# Setup
+work_dir <- "D:/Bishe/1ng/project/wmx/20260330"
 setwd(work_dir)
 
 # Configuration
 AVERAGE_READ_LEN <- 150  
-date_prefix <- "20260324"
-file_suffix <- "norm66M"
+date_prefix <- "20260330"
 
 library("ggplot2")
 library("tidyr")
@@ -22,7 +21,6 @@ gini_index <- function(x) {
   G / (n * sum(x))
 }
 
-# Autosome metric calculation
 calculate_metric_autosomes <- function(data_list, metric_func, metric_name, 
                                        autosomes = paste0("chr", 1:19)) {
   result_list <- list()
@@ -37,7 +35,6 @@ calculate_metric_autosomes <- function(data_list, metric_func, metric_name,
   return(do.call(rbind, result_list))
 }
 
-# Global Plotting Theme
 common_theme <- theme_bw() +
   theme(
     text = element_text(size = 14),
@@ -48,7 +45,7 @@ common_theme <- theme_bw() +
 
 # Coverage Analysis
 cat(">>> Processing Coverage...\n")
-cov_file <- paste0(date_prefix, ".", file_suffix, ".coverage.count")
+cov_file <- paste0(date_prefix, ".coverage.count")
 
 if(file.exists(cov_file)){
   coverage_df <- read.table(cov_file, header = F, sep = "", fill = TRUE)
@@ -64,20 +61,24 @@ if(file.exists(cov_file)){
   p_coverage <- ggplot(data = coverage_df, mapping = aes(x = V1, y = percentage, fill = V1, label = label)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
     geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 3) +
-    labs(x = "Sample", y = "Percentage", title = "Genome Coverage (Mouse)") + 
+    labs(x = "Sample", y = "Percentage", title = "Genome Coverage") + 
     common_theme + theme(legend.position = "none")
   
-  ggsave(plot = p_coverage, filename = paste0(date_prefix, ".", file_suffix, ".coverage.png"), width = w_base, height = 8)
+  print(p_coverage)
+  ggsave(plot = p_coverage, filename = paste0(date_prefix, ".coverage.pdf"), width = w_base, height = 8)
+  ggsave(plot = p_coverage, filename = paste0(date_prefix, ".coverage.png"), width = w_base, height = 8)
+} else {
+  stop("Coverage file not found!")
 }
 
 # Relative Depth Analysis (CV & Gini)
 cat(">>> Processing Relative Depth (CV & Gini)...\n")
-file_paths <- paste0(sample_ids, ".pe.F904.", file_suffix, ".s.bam.100000.relative.depth")
+file_paths <- paste0(sample_ids, ".pe.F904", ".s.bam.100000.relative.depth")
 
 if(all(file.exists(file_paths))) {
   relative_depth_list <- setNames(lapply(file_paths, function(fp) read.table(fp, header = FALSE, sep = "\t")), sample_ids)
   
-  # CV Calculation (chr1-19)
+  # CV Calculation
   cv_df <- calculate_metric_autosomes(relative_depth_list, cv, "cv")
   cv_df$platform <- "MDA"
   cv_df$sample <- factor(cv_df$sample, levels = sample_ids) 
@@ -85,12 +86,13 @@ if(all(file.exists(file_paths))) {
   p_cv <- ggplot(data = cv_df, aes(x = sample, y = cv, fill = platform)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
     geom_text(mapping = aes(label = round(cv, 2)), position = position_dodge(width = 0.9), vjust = -0.5, size = 3) +
-    labs(x = "", y = "Coefficient of Variation (CV)", title = "CV of Mouse Autosomes (chr1-19)") +
+    labs(x = "", y = "Coefficient of Variation (CV)", title = "CV of Autosomes Relative Depth") +
     scale_fill_brewer(palette = "YlGnBu") + common_theme + theme(legend.position = "none")
   
-  ggsave(plot = p_cv, filename = paste0(date_prefix, ".", file_suffix, ".autosomes_cv.png"), width = w_base, height = 6)
+  ggsave(plot = p_cv, filename = paste0(date_prefix, ".autosomes_cv.pdf"), width = w_base, height = 6)
+  ggsave(plot = p_cv, filename = paste0(date_prefix, ".autosomes_cv.png"), width = w_base, height = 6)
   
-  # Gini Calculation (chr1-19)
+  # Gini Calculation
   gini_df <- calculate_metric_autosomes(relative_depth_list, gini_index, "gini")
   gini_df$platform <- "MDA"
   gini_df$sample <- factor(gini_df$sample, levels = sample_ids) 
@@ -98,15 +100,16 @@ if(all(file.exists(file_paths))) {
   p_gini <- ggplot(data = gini_df, aes(x = sample, y = gini, fill = platform)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
     geom_text(mapping = aes(label = round(gini, 2)), position = position_dodge(width = 0.9), vjust = -0.5, size = 3) +
-    labs(x = "", y = "Gini Coefficient", title = "Gini Index of Mouse Autosomes (chr1-19)") +
+    labs(x = "", y = "Gini Coefficient", title = "Gini Index of Autosomes Relative Depth") +
     scale_fill_brewer(palette = "YlGnBu") + common_theme + theme(legend.position = "none")
   
-  ggsave(plot = p_gini, filename = paste0(date_prefix, ".", file_suffix, ".autosomes_gini.png"), width = w_base, height = 6)
+  ggsave(plot = p_gini, filename = paste0(date_prefix, ".autosomes_gini.pdf"), width = w_base, height = 6)
+  ggsave(plot = p_gini, filename = paste0(date_prefix, ".autosomes_gini.png"), width = w_base, height = 6)
 }
 
 # Chimeric Ratios Analysis
 cat(">>> Processing Chimeric Ratios...\n")
-chimera_file <- paste0(date_prefix, ".", file_suffix, ".Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.count")
+chimera_file <- paste0(date_prefix, ".Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.count")
 
 if(file.exists(chimera_file)) {
   chimera_df <- read.table(chimera_file, header = F, sep = "\t")
@@ -116,19 +119,31 @@ if(file.exists(chimera_file)) {
   chimera_df$ratio <- chimera_df$V4 / chimera_df$total_fragments
   chimera_df$label <- paste0(round(chimera_df$ratio * 100, 1), "%")
   
+  # All Types (Including Normal)
+  p_chimera <- ggplot(data = chimera_df, mapping = aes(x = V1, y = ratio, fill = V3, label = label)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+    geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 2.5) +
+    labs(x = "Sample", y = "Percentage", title = "Chimeric Reads Percentage (All Types)") + common_theme
+  
+  ggsave(plot = p_chimera, filename = paste0(date_prefix, ".chimera_all.pdf"), width = w_group, height = 8)
+  ggsave(plot = p_chimera, filename = paste0(date_prefix, ".chimera_all.png"), width = w_group, height = 8)
+  
+  # Excluding Normal for plot
   chimera_no_normal_df <- chimera_df %>% filter(V3 != "Normal")
   p_chimera_noNormal <- ggplot(data = chimera_no_normal_df, mapping = aes(x = V1, y = ratio, fill = V3, label = label)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
     geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 2.5) +
     labs(x = "Sample", y = "Percentage", title = "Chimeric Reads Percentage (Excl. Normal)") + common_theme
   
-  ggsave(plot = p_chimera_noNormal, filename = paste0(date_prefix, ".", file_suffix, ".chimera_noNormal.png"), width = w_group, height = 8)
+  ggsave(plot = p_chimera_noNormal, filename = paste0(date_prefix, ".chimera_noNormal.pdf"), width = w_group, height = 8)
+  ggsave(plot = p_chimera_noNormal, filename = paste0(date_prefix, ".chimera_noNormal.png"), width = w_group, height = 8)
 }
 
-# Base Counts
-cat(">>> Processing Base Counts...\n")
-base_count_file <- paste0(date_prefix, ".", file_suffix, ".total_base.count")
+# Base Counts & Normalized Breakpoints
+cat(">>> Processing Base Counts & Breakpoints...\n")
+base_count_file <- paste0(date_prefix, ".total_base.count")
 
+# Total Base Count
 if(file.exists(base_count_file)) {
   base_count_raw <- read.table(base_count_file, header = F, sep = "\t")
   base_count_agg <- base_count_raw %>% 
@@ -142,7 +157,8 @@ if(file.exists(base_count_file)) {
     labs(x = "Sample", y = "Base Count (Raw)", title = "Sequencing Base Count") +
     common_theme + theme(legend.position = "none")
   
-  ggsave(plot = p_basecount, filename = paste0(date_prefix, ".", file_suffix, ".basecount.png"), width = w_base, height = 8)
+  ggsave(plot = p_basecount, filename = paste0(date_prefix, ".basecount.pdf"), width = w_base, height = 8)
+  ggsave(plot = p_basecount, filename = paste0(date_prefix, ".basecount.png"), width = w_base, height = 8)
 }
 
 # Breakpoint Normalization
@@ -157,12 +173,14 @@ if(exists("chimera_df")) {
     labs(x = "Sample", y = "Breakpoint per 10kb (Mapped)", title = "Normalized Chimeric Breakpoints") +
     common_theme
   
-  ggsave(plot = p_breakpoints, filename = paste0(date_prefix, ".", file_suffix, ".breakpoint_per_10kb.png"), width = w_group, height = 8)
+  print(p_breakpoints)
+  ggsave(plot = p_breakpoints, filename = paste0(date_prefix, ".breakpoint_per_10kb.pdf"), width = w_group, height = 8)
+  ggsave(plot = p_breakpoints, filename = paste0(date_prefix, ".breakpoint_per_10kb.png"), width = w_group, height = 8)
 }
 
 # Split Mapping Analysis
 cat(">>> Processing Split Mapping Rates...\n")
-split_file <- paste0(date_prefix, ".", file_suffix, ".splitmapping.count")
+split_file <- paste0(date_prefix, ".splitmapping.count")
 
 if(file.exists(split_file)) {
   split_df <- read.table(split_file, header = F, sep = "\t")
@@ -178,7 +196,9 @@ if(file.exists(split_file)) {
     labs(x = "Sample", y = "Split Mapping Rate", title = "Split-Read Chimeric Rate") +
     common_theme + theme(legend.position = "none") 
   
-  ggsave(plot = p_split, filename = paste0(date_prefix, ".", file_suffix, ".splitmapping_rate.png"), width = w_base, height = 6)
+  print(p_split)
+  ggsave(plot = p_split, filename = paste0(date_prefix, ".splitmapping_rate.pdf"), width = w_base, height = 6)
+  ggsave(plot = p_split, filename = paste0(date_prefix, ".splitmapping_rate.png"), width = w_base, height = 6)
 }
 
-cat(">>> Mouse Analysis Complete.\n")
+cat(">>> Analysis Complete.\n")
