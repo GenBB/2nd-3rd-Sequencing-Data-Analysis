@@ -12,7 +12,7 @@ WORK_DIR="/public5/home/t6s009028/project/20260331/dataprocess"
 RAW_DIR="/public5/home/t6s009028/project/20260331/20260327_E260327003_U5107_FQ260301311/RawData"
 OUTPUT_DIR="${WORK_DIR}/results"
 REF_GENOME="/public5/home/t6s009028/workscript/dm6_1/dm6.fa"
-SCRIPT_DIR="/public5/home/sch5655/wmx"
+SCRIPT_DIR="/public5/home/t6s009028/workscript"
 SAMPLES="PTA-S3-1 PTA-S2-1 PTA-S0-1 A-B H-B A-BH H-BH A-SH H-SH PTA-S3-2 PTA-S2-2 PTA-S0-2"
 
 mkdir -p $OUTPUT_DIR
@@ -24,7 +24,7 @@ for file in ${RAW_DIR}/*/*.fq.gz ; do
     [ ! -e "$shortname" ] && ln -s "$file" "$shortname"
 done
 
-for f in coverage discordant splitmapping chimera total_base; do
+for f in coverage discordant splitmapping Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal total_base; do
     > ${OUTPUT_DIR}/${DATE}.${f}.count
 done
 
@@ -41,11 +41,16 @@ for r in ${SAMPLES}; do
     samtools view -@ $THREADS -b -F0x904 ${out_prefix}.pe.F4.s.bam > ${out_prefix}.pe.F904.s.bam
     samtools index -@ $THREADS ${out_prefix}.pe.F904.s.bam
     
-    indepth=${out_prefix}.pe.F904.s.bam.depth
-    samtools depth -a ${out_prefix}.pe.F904.s.bam > $indepth
-    python3 ${SCRIPT_DIR}/relative_depth.py $indepth
+    mosdepth_prefix="${out_prefix}.F904"
+    mosdepth -n -t 16 -b 100000 $mosdepth_prefix ${out_prefix}.pe.F904.s.bam
 
-    cat $indepth | awk -v s="$r" 'BEGIN{t=0; o=0}{t++; if($3>0)o++} END{print s"\t"o"\t"t}' >> ${OUTPUT_DIR}/${DATE}.coverage.count
+    out_relative="${out_prefix}.pe.F904.s.bam.100000.relative.depth"
+    python3 ${SCRIPT_DIR}/mosdepth_relative_depth.py ${mosdepth_prefix}.regions.bed.gz $out_relative
+
+
+    total_count=$(awk '$1=="total" {print $2}' ${mosdepth_prefix}.mosdepth.summary.txt)
+    over0_count=$(awk -v tot="$total_count" '$1=="total" && $2==1 {printf "%d", $3*tot}' ${mosdepth_prefix}.mosdepth.global.dist.txt)
+    echo -e "${r}\t${over0_count}\t${total_count}" >> ${OUTPUT_DIR}/${DATE}.coverage.count
 
     samtools view -@16 ${out_prefix}.pe.F904.s.bam | awk -v s="$r" 'BEGIN{a=0; sp=0}{if($1 in all){c=1} else{if($7!="="||$9>1000||$9<-1000){sp++}; a++}} END{print s"\t"sp"\t"a}' >> ${OUTPUT_DIR}/${DATE}.discordant.count
     
