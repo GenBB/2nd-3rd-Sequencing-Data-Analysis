@@ -2,14 +2,13 @@
 #SBATCH -p v6_384
 #SBATCH -N 1
 #SBATCH -n 32
-#SBATCH -J Downsample_Process
+#SBATCH -J Downsample_Clean
 #SBATCH -o %j.out
 #SBATCH -e %j.err
 
 DATE="20260331"
 TARGET_READS=66000000
 SUFFIX="norm66M"
-THREADS=32
 WORK_DIR="/public5/home/t6s009028/project/20260331/dataprocess"
 OUTPUT_DIR="${WORK_DIR}/results"
 SCRIPT_DIR="/public5/home/t6s009028/workscript"
@@ -26,22 +25,17 @@ for r in ${SAMPLES}; do
     out_prefix="${OUTPUT_DIR}/${r}"
     
     total_reads=$(samtools idxstats ${out_prefix}.pe.F904.s.bam | awk '{sum += $3} END {print sum}')
-
-    norm_F4="${out_prefix}.pe.F4.${SUFFIX}.s.bam"
     norm_F904="${out_prefix}.pe.F904.${SUFFIX}.s.bam"
 
     if [ "$total_reads" -le "$TARGET_READS" ]; then
-        cp ${out_prefix}.pe.F4.s.bam $norm_F4
         cp ${out_prefix}.pe.F904.s.bam $norm_F904
     else
         fraction=$(awk -v t="$TARGET_READS" -v tot="$total_reads" 'BEGIN {printf "%.4f", t/tot}')
         seed_frac=$(awk -v f="$fraction" 'BEGIN { printf "42%s", substr(f, 2) }')
         
-        samtools view -@ 16 -s "$seed_frac" -b ${out_prefix}.pe.F4.s.bam > $norm_F4
-        samtools view -@ 16 -bS -F0x904 $norm_F4 > $norm_F904
+        samtools view -@ 16 -s "$seed_frac" -b ${out_prefix}.pe.F904.s.bam > $norm_F904
     fi
 
-    samtools index -@ 16 $norm_F4
     samtools index -@ 16 $norm_F904
 
     mosdepth_prefix="${out_prefix}.F904.${SUFFIX}"
@@ -69,13 +63,12 @@ for r in ${SAMPLES}; do
         print id"\tread_2\t"r2
     }' >> ${OUTPUT_DIR}/${DATE}.${SUFFIX}.total_base.count
 
-    samtools sort -n -@ 16 -m 5G -T ${OUTPUT_DIR}/tmp_sort_dir/${r}_ns_tmp -o ${out_prefix}.F4.${SUFFIX}.name_s.bam $norm_F4
-    inbam_ns=${out_prefix}.F4.${SUFFIX}.name_s.bam
+    samtools sort -n -@ 16 -m 5G -T ${OUTPUT_DIR}/tmp_sort_dir/${r}_ns_tmp -o ${out_prefix}.F904.${SUFFIX}.name_s.bam $norm_F904
+    inbam_ns=${out_prefix}.F904.${SUFFIX}.name_s.bam
     
     python3 ${SCRIPT_DIR}/get_chimera.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.pe.quick.py $inbam_ns $r >> ${OUTPUT_DIR}/${DATE}.${SUFFIX}.Interchromosomal_Inverted_Outward_Large_Insert_Unclassified_Normal.count &
 
 done
 
 wait
-
 rm -rf ${OUTPUT_DIR}/tmp_sort_dir/
