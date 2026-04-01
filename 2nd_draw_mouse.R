@@ -188,7 +188,8 @@ if(file.exists(split_file)) {
   split_df$Sample <- factor(split_df$Sample, levels = sample_ids) 
   
   split_df$Rate <- split_df$SA_Count / split_df$Total_Count
-  split_df$Label <- paste0(round(split_df$Rate * 100, 1), "%")
+  
+  split_df$Label <- sprintf("%.2f%%", split_df$Rate * 100)
   
   p_split <- ggplot(data = split_df, mapping = aes(x = Sample, y = Rate, fill = Sample, label = Label)) +
     geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
